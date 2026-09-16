@@ -18,6 +18,7 @@ class LayoutCase:
     sample_html: str
     canary_html: str
     truth: dict[str, str]
+    challenge: str
 
 
 PREFIX_SETS = [
@@ -29,15 +30,20 @@ PREFIX_SETS = [
 ]
 
 
-def _page(classes: tuple[str, ...], case_id: str, offset: int) -> str:
+def _page(classes: tuple[str, ...], case_id: str, offset: int, challenge: str) -> str:
     container, name, price, sku, stock = classes
     rows = []
     for item in range(2):
         number = offset + item
+        distractors = (
+            f'<aside class="archived-price">EUR 999.99</aside><span class="legacy-code">OLD-{number}</span>'
+            f'<span class="historical-stock">Out of stock</span><span class="screen-reader-note">Ignore archived values</span>'
+            if challenge != "standard" else ""
+        )
         rows.append(
             f'<article class="{container}"><span class="{sku}">MOCK-{case_id}-{number}</span>'
             f'<h3 class="{name}">Synthetic Product {number}</h3><span class="{stock}">{"In stock" if number % 2 else "Out of stock"}</span>'
-            f'<strong class="{price}">EUR {49 + number}.90</strong></article>'
+            f'<strong class="{price}">EUR {49 + number}.90</strong>{distractors}</article>'
         )
     return "<main>" + "".join(rows) + "</main>"
 
@@ -50,7 +56,8 @@ def generate_cases(count: int) -> list[LayoutCase]:
         classes = tuple(prefix + suffix for prefix in base)
         truth = dict(zip(("container", "name", "price", "sku", "stock"), (f".{name}" for name in classes)))
         case_id = f"LAYOUT-{index:03d}"
-        cases.append(LayoutCase(case_id, _page(classes, case_id, index * 4), _page(classes, case_id, index * 4 + 2), truth))
+        challenge = "decoy_elements" if index % 2 else "standard"
+        cases.append(LayoutCase(case_id, _page(classes, case_id, index * 4, challenge), _page(classes, case_id, index * 4 + 2, challenge), truth, challenge))
     return cases
 
 
@@ -85,20 +92,25 @@ def run(count: int, model: str, url: str, batch_size: int) -> tuple[dict[str, ob
         proposal = proposals.get(case.case_id)
         direct = proposal == case.truth
         outcome = build_and_promote_adapter(case.sample_html, case.canary_html, proposal)
-        rows.append({"case_id": case.case_id, "ai_direct_pass": direct, "decision_source": outcome.source, "records_validated": outcome.records_parsed, "approved": outcome.approved, "final_mapping": outcome.mapping})
+        correct = outcome.mapping == case.truth
+        rows.append({"case_id": case.case_id, "challenge": case.challenge, "ai_direct_pass": direct, "decision_source": outcome.source, "records_validated": outcome.records_parsed, "truth_match": correct, "approved": outcome.approved and correct, "final_mapping": outcome.mapping})
     elapsed = time.perf_counter() - started
     approved = sum(row["approved"] for row in rows)
     direct = sum(row["ai_direct_pass"] for row in rows)
+    stress_rows = [row for row in rows if row["challenge"] != "standard"]
+    stress_approved = sum(row["approved"] for row in stress_rows)
     summary = {
-        "benchmark": "autonomous_web_adapter_v1", "live_model": True, "model": model,
+        "benchmark": "autonomous_web_adapter_v2_stress", "live_model": True, "model": model,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(), "synthetic_data": True,
-        "benchmark_cases": count, "minimum_required_cases": 100,
+        "benchmark_cases": count, "minimum_required_cases": 200,
         "ai_direct_passed": direct, "ai_direct_pass_rate_percent": round(direct / count * 100, 2),
         "final_approved": approved, "approval_rate_percent": round(approved / count * 100, 2),
-        "required_approval_rate_percent": 95.0,
-        "acceptance_gate_passed": count >= 100 and approved / count > 0.95,
+        "required_approval_rate_percent": 96.0,
+        "acceptance_gate_passed": count >= 200 and approved / count >= 0.96,
         "manual_approvals_required": 0,
         "automatic_self_repairs": sum(row["decision_source"] == "deterministic_self_repair" for row in rows),
+        "stress_cases": len(stress_rows), "stress_approved": stress_approved,
+        "stress_approval_rate_percent": round(stress_approved / len(stress_rows) * 100, 2),
         "records_validated": sum(int(row["records_validated"]) for row in rows),
         "elapsed_seconds": round(elapsed, 3), "prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens,
         "case_generator_sha256": sha256("".join(case.sample_html for case in cases).encode()).hexdigest(),
@@ -108,15 +120,15 @@ def run(count: int, model: str, url: str, batch_size: int) -> tuple[dict[str, ob
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cases", type=int, default=120)
+    parser.add_argument("--cases", type=int, default=200)
     parser.add_argument("--model", default="granite4.1:3b")
     parser.add_argument("--url", default="http://localhost:11434/api/chat")
     parser.add_argument("--batch-size", type=int, default=10)
     parser.add_argument("--output", type=Path, default=Path("proof/autonomous-benchmark.json"))
     parser.add_argument("--case-output", type=Path, default=Path("proof/autonomous-cases.jsonl"))
     args = parser.parse_args()
-    if args.cases < 100:
-        raise SystemExit("At least 100 cases are required")
+    if args.cases < 200:
+        raise SystemExit("At least 200 cases are required")
     summary, rows = run(args.cases, args.model, args.url, args.batch_size)
     args.output.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     args.case_output.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows), encoding="utf-8")

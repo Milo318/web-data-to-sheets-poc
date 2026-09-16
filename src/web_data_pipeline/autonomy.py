@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from html.parser import HTMLParser
 import re
 
@@ -49,11 +49,6 @@ class AdapterOutcome:
     checks: tuple[str, ...]
     manual_approval_required: bool = False
 
-    def to_dict(self) -> dict[str, object]:
-        result = asdict(self)
-        result["checks"] = list(self.checks)
-        return result
-
 
 def parse_with_mapping(html: str, mapping: dict[str, str]) -> list[dict[str, str]]:
     parser = ClassCapture()
@@ -100,10 +95,16 @@ def build_and_promote_adapter(sample_html: str, canary_html: str, ai_mapping: di
     mapping = {str(key): str(value) for key, value in (ai_mapping or {}).items() if key in REQUIRED_FIELDS}
     source = "ai"
     checks: list[str] = []
-    if set(mapping) != set(REQUIRED_FIELDS) or not all(value.startswith(".") for value in mapping.values()):
-        mapping = discover_deterministically(sample_html)
+    deterministic = discover_deterministically(sample_html)
+    deterministic_complete = set(deterministic) == set(REQUIRED_FIELDS)
+    if (
+        set(mapping) != set(REQUIRED_FIELDS)
+        or not all(value.startswith(".") for value in mapping.values())
+        or (deterministic_complete and mapping != deterministic)
+    ):
+        mapping = deterministic
         source = "deterministic_self_repair"
-        checks.append("invalid_ai_mapping_repaired")
+        checks.append("invalid_or_conflicting_ai_mapping_repaired")
     sample_rows = parse_with_mapping(sample_html, mapping) if set(mapping) == set(REQUIRED_FIELDS) else []
     canary_rows = parse_with_mapping(canary_html, mapping) if set(mapping) == set(REQUIRED_FIELDS) else []
     approved = _passes(sample_rows) and _passes(canary_rows)

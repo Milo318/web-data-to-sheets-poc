@@ -46,8 +46,10 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(outcome.source, "deterministic_self_repair")
         self.assertFalse(outcome.manual_approval_required)
 
-    def test_autonomous_benchmark_has_120_layouts(self) -> None:
-        self.assertEqual(len(generate_cases(120)), 120)
+    def test_autonomous_benchmark_has_200_layouts(self) -> None:
+        cases = generate_cases(200)
+        self.assertEqual(len(cases), 200)
+        self.assertEqual(sum(case.challenge != "standard" for case in cases), 100)
 
 
 if __name__ == "__main__":

@@ -14,24 +14,27 @@ A compact proof of concept for turning supplier-style HTML product pages into va
 
 The upgraded workflow lets a live local model discover extraction adapters for previously unseen HTML layouts. Deterministic validators then parse a sample and a separate canary page. A mapping is promoted automatically only when required fields, value types, record counts, SKUs, prices, and stock values all pass. Invalid model output is self-repaired from semantic class evidence; no human approval step exists.
 
-The committed [live-model benchmark](proof/autonomous-benchmark.json) and [120 case-level results](proof/autonomous-cases.jsonl) were generated with `granite4.1:3b` through Ollama:
+The committed [live-model benchmark](proof/autonomous-benchmark.json) and [200 case-level results](proof/autonomous-cases.jsonl) were generated with `granite4.1:3b` through Ollama:
+
+> **How to read 100%:** the model directly mapped all 200 controlled layouts in this run. The reported final result still belongs to the complete system because every mapping had to pass deterministic field checks and separate sample/canary parsing. Expected mappings are used for scoring only, not supplied to the runtime controller; this bounded result is not a universal scraping-accuracy claim.
 
 | Autonomous acceptance check | Result |
 |---|---:|
-| Independent layouts | 120 |
-| Raw AI mappings correct | 120 / 120 |
-| Sample + canary records validated | 480 |
-| Final machine-approved cases | 120 / 120 |
-| Approval rate | **100%** |
+| Independent layouts | 200 |
+| Raw AI mappings correct | 200 / 200 |
+| Decoy-element stress layouts | 100 / 100 approved |
+| Sample + canary records validated | 800 |
+| Final machine-approved cases | 200 / 200 |
+| Final system approval rate | **100%** |
 | Human approvals | **0** |
 
 ```bash
-python -m web_data_pipeline.autonomous_benchmark --cases 120 --model granite4.1:3b
+python -m web_data_pipeline.autonomous_benchmark --cases 200 --model granite4.1:3b
 ```
 
 Reproduction requires a running Ollama service with the selected model installed.
 
-The approval rate measures the complete autonomous system, not an unsupported model claim. Every approved case must also match the disclosed generated truth and pass the deterministic canary gate.
+Half of the layouts contain plausible archived prices, legacy SKUs, historical stock values, and accessibility notes. The approval rate measures the complete autonomous system, not an unsupported model claim. Every approved case must also match the disclosed generated truth and pass the deterministic canary gate.
 
 ## Proof of work
 
@@ -105,7 +108,7 @@ python -m web_data_pipeline.cli --ai
 - [`tests/test_pipeline.py`](tests/test_pipeline.py) — normalization, deduplication, CSV, and XLSX checks
 - [`proof/benchmark.json`](proof/benchmark.json) — machine-readable benchmark output
 - [`proof/autonomous-benchmark.json`](proof/autonomous-benchmark.json) — live-model acceptance summary
-- [`proof/autonomous-cases.jsonl`](proof/autonomous-cases.jsonl) — all 120 case decisions
+- [`proof/autonomous-cases.jsonl`](proof/autonomous-cases.jsonl) — all 200 case decisions
 - [`proof/portfolio-card.png`](proof/portfolio-card.png) — portfolio-ready evidence image
 - [GitHub Actions workflow](.github/workflows/ci.yml) — runs tests and a fresh benchmark on every push
 

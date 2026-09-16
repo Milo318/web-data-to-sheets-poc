@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import csv
+import json
 from pathlib import Path
 from typing import Iterable
 
+from .ai import enrich_product
 from .scraper import Product, parse_products
 
 
@@ -59,14 +61,20 @@ def export_xlsx(products: list[Product], destination: Path) -> None:
     workbook.save(destination)
 
 
-def run_pipeline(input_dir: Path, output_dir: Path) -> dict[str, int | str]:
-    products, duplicates = load_products(input_dir.glob("*.html"))
+def run_pipeline(input_dir: Path, output_dir: Path, with_ai: bool = False) -> dict[str, int | str]:
+    paths = list(input_dir.glob("*.html"))
+    products, duplicates = load_products(paths)
     export_csv(products, output_dir / "products.csv")
     export_xlsx(products, output_dir / "products.xlsx")
-    return {
-        "input_files": len(list(input_dir.glob("*.html"))),
+    summary: dict[str, int | str] = {
+        "input_files": len(paths),
         "unique_products": len(products),
         "duplicates_resolved": duplicates,
         "invalid_rows": 0,
         "output": str(output_dir),
     }
+    if with_ai:
+        enriched = [{**product.row(), **enrich_product(product.row())} for product in products]
+        (output_dir / "ai_enrichment.json").write_text(json.dumps(enriched, indent=2), encoding="utf-8")
+        summary["ai_enriched"] = len(enriched)
+    return summary
