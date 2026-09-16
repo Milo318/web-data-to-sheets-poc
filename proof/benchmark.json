@@ -1,0 +1,10 @@
+{
+  "fixture": "supplier-a.html",
+  "synthetic_data": true,
+  "runs": 250,
+  "records_per_run": 6,
+  "records_processed": 1500,
+  "median_latency_ms": 0.114,
+  "throughput_records_per_second": 51840.2,
+  "record_count_consistency_percent": 100.0
+}
