@@ -6,6 +6,8 @@
 
 A compact proof of concept for turning supplier-style HTML product pages into validated CSV and Excel workbooks. It resolves duplicate SKUs, normalizes prices and stock values, rejects malformed records, and produces business-ready spreadsheet files.
 
+**Public repository:** https://github.com/Milo318/web-data-to-sheets-poc
+
 > **Data notice:** every product, supplier page, and benchmark input in this repository is synthetic mock data created for demonstration. No real company or customer data is included.
 
 ## Proof of work
