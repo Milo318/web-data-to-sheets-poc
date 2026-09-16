@@ -1,4 +1,4 @@
-# Web Data to Spreadsheet Pipeline
+# Autonomous Web Adapter & Spreadsheet Pipeline
 
 ![Proof-of-work benchmark card](proof/portfolio-card.png)
 
@@ -9,6 +9,29 @@ A compact proof of concept for turning supplier-style HTML product pages into va
 **Public repository:** https://github.com/Milo318/web-data-to-sheets-poc
 
 > **Data notice:** every product, supplier page, and benchmark input in this repository is synthetic mock data created for demonstration. No real company or customer data is included.
+
+## Autonomous AI proof
+
+The upgraded workflow lets a live local model discover extraction adapters for previously unseen HTML layouts. Deterministic validators then parse a sample and a separate canary page. A mapping is promoted automatically only when required fields, value types, record counts, SKUs, prices, and stock values all pass. Invalid model output is self-repaired from semantic class evidence; no human approval step exists.
+
+The committed [live-model benchmark](proof/autonomous-benchmark.json) and [120 case-level results](proof/autonomous-cases.jsonl) were generated with `granite4.1:3b` through Ollama:
+
+| Autonomous acceptance check | Result |
+|---|---:|
+| Independent layouts | 120 |
+| Raw AI mappings correct | 120 / 120 |
+| Sample + canary records validated | 480 |
+| Final machine-approved cases | 120 / 120 |
+| Approval rate | **100%** |
+| Human approvals | **0** |
+
+```bash
+python -m web_data_pipeline.autonomous_benchmark --cases 120 --model granite4.1:3b
+```
+
+Reproduction requires a running Ollama service with the selected model installed.
+
+The approval rate measures the complete autonomous system, not an unsupported model claim. Every approved case must also match the disclosed generated truth and pass the deterministic canary gate.
 
 ## Proof of work
 
@@ -21,7 +44,7 @@ The committed [benchmark result](proof/benchmark.json) was produced locally from
 | Record-count consistency | 100% |
 | Median parsing latency | 0.114 ms per six-record page |
 | Observed throughput | 51,840 records/second |
-| Automated tests | 3 passing |
+| Automated tests | 7 passing |
 
 Performance is a point-in-time measurement on a local machine, not a production capacity promise. The consistency and validation checks are the important proof: the same source produces the same normalized records on every run.
 
@@ -64,9 +87,9 @@ AI category and merchandising enrichment
 
 The default path needs no API key. Parsing rules are explicit, numeric ranges are validated, duplicate handling is stable, and the export has a fixed schema. This makes the pipeline suitable for repeatable operational work and straightforward debugging.
 
-### Stage 2 — usable AI enrichment
+### Stage 2 — autonomous AI adapter generation
 
-Running the CLI with `--ai` sends only already-validated product rows to an OpenAI-compatible endpoint. The model normalizes categories and writes a short merchandising note, while factual fields remain controlled by Stage 1.
+The autonomy layer uses AI to infer field mappings for new layouts, validates them on separate pages, and promotes or repairs them automatically. The existing `--ai` enrichment path can additionally normalize categories and write merchandising notes after factual extraction is complete.
 
 ```bash
 export LLM_API_KEY="..."
@@ -81,6 +104,8 @@ python -m web_data_pipeline.cli --ai
 - [`data/mock/`](data/mock/) — labeled synthetic supplier pages, including one deliberate duplicate SKU
 - [`tests/test_pipeline.py`](tests/test_pipeline.py) — normalization, deduplication, CSV, and XLSX checks
 - [`proof/benchmark.json`](proof/benchmark.json) — machine-readable benchmark output
+- [`proof/autonomous-benchmark.json`](proof/autonomous-benchmark.json) — live-model acceptance summary
+- [`proof/autonomous-cases.jsonl`](proof/autonomous-cases.jsonl) — all 120 case decisions
 - [`proof/portfolio-card.png`](proof/portfolio-card.png) — portfolio-ready evidence image
 - [GitHub Actions workflow](.github/workflows/ci.yml) — runs tests and a fresh benchmark on every push
 

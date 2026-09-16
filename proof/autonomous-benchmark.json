@@ -1,0 +1,22 @@
+{
+  "benchmark": "autonomous_web_adapter_v1",
+  "live_model": true,
+  "model": "granite4.1:3b",
+  "generated_at_utc": "2026-09-16T07:15:03.691519+00:00",
+  "synthetic_data": true,
+  "benchmark_cases": 120,
+  "minimum_required_cases": 100,
+  "ai_direct_passed": 120,
+  "ai_direct_pass_rate_percent": 100.0,
+  "final_approved": 120,
+  "approval_rate_percent": 100.0,
+  "required_approval_rate_percent": 95.0,
+  "acceptance_gate_passed": true,
+  "manual_approvals_required": 0,
+  "automatic_self_repairs": 0,
+  "records_validated": 480,
+  "elapsed_seconds": 279.431,
+  "prompt_tokens": 20496,
+  "completion_tokens": 6664,
+  "case_generator_sha256": "d9319f162813a082ebfa609283b66d190324edbf2db74b4efec9cf463a6c4ea6"
+}

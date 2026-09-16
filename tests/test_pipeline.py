@@ -4,6 +4,8 @@ import unittest
 
 from web_data_pipeline.pipeline import load_products, run_pipeline
 from web_data_pipeline.scraper import parse_products
+from web_data_pipeline.autonomy import build_and_promote_adapter
+from web_data_pipeline.autonomous_benchmark import generate_cases
 
 
 FIXTURES = Path(__file__).parents[1] / "data" / "mock"
@@ -30,6 +32,22 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(summary["unique_products"], 11)
             self.assertTrue((output / "products.csv").exists())
             self.assertTrue((output / "products.xlsx").exists())
+
+    def test_ai_mapping_is_canary_validated(self) -> None:
+        case = generate_cases(1)[0]
+        outcome = build_and_promote_adapter(case.sample_html, case.canary_html, case.truth)
+        self.assertTrue(outcome.approved)
+        self.assertEqual(outcome.records_parsed, 4)
+
+    def test_invalid_mapping_self_repairs_without_approval(self) -> None:
+        case = generate_cases(1)[0]
+        outcome = build_and_promote_adapter(case.sample_html, case.canary_html, {"name": ".wrong"})
+        self.assertTrue(outcome.approved)
+        self.assertEqual(outcome.source, "deterministic_self_repair")
+        self.assertFalse(outcome.manual_approval_required)
+
+    def test_autonomous_benchmark_has_120_layouts(self) -> None:
+        self.assertEqual(len(generate_cases(120)), 120)
 
 
 if __name__ == "__main__":

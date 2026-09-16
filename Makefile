@@ -1,4 +1,4 @@
-.PHONY: install test demo proof
+.PHONY: install test demo proof autonomy-proof
 install:
 	python3 -m pip install -e .
 test:
@@ -7,3 +7,5 @@ demo:
 	python3 -m web_data_pipeline.cli --input data/mock --output output
 proof: test demo
 	python3 -m web_data_pipeline.benchmark --output proof/benchmark.json
+autonomy-proof:
+	python3 -m web_data_pipeline.autonomous_benchmark --cases 120
